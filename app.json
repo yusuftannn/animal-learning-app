@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Hayvan Sesleri",
+    "slug": "animal-learning-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F7F3E8"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {},
+    "web": {},
+    "plugins": [
+      "expo-audio"
+    ]
+  }
+}
