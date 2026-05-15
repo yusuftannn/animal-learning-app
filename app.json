@@ -17,7 +17,9 @@
     "android": {},
     "web": {},
     "plugins": [
-      "expo-audio"
+      "expo-audio",
+      "expo-font",
+      "expo-asset"
     ]
   }
 }

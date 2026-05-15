@@ -9,6 +9,8 @@ type AnimalSoundState = {
   selectedAnimalId?: string;
   score: number;
   round: number;
+  streak: number;
+  bestStreak: number;
   isLoading: boolean;
   error?: string;
   loadAnimals: () => Promise<void>;
@@ -43,6 +45,8 @@ export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
   animals: [],
   score: 0,
   round: 1,
+  streak: 0,
+  bestStreak: 0,
   isLoading: false,
 
   loadAnimals: async () => {
@@ -68,23 +72,28 @@ export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
     set({
       score: 0,
       round: 1,
+      streak: 0,
       selectedAnimalId: undefined,
       currentQuestion: createQuestion(animals),
     });
   },
 
   answer: (animalId: string) => {
-    const { currentQuestion, selectedAnimalId, score } = get();
+    const { bestStreak, currentQuestion, selectedAnimalId, score, streak } = get();
 
     if (!currentQuestion || selectedAnimalId) {
       return undefined;
     }
 
     const isCorrect = animalId === currentQuestion.correctAnimal.id;
+    const nextStreak = isCorrect ? streak + 1 : 0;
+    const streakBonus = isCorrect && nextStreak > 1 ? Math.min(nextStreak * 2, 10) : 0;
 
     set({
       selectedAnimalId: animalId,
-      score: isCorrect ? score + 10 : score,
+      score: isCorrect ? score + 10 + streakBonus : score,
+      streak: nextStreak,
+      bestStreak: Math.max(bestStreak, nextStreak),
     });
 
     return {

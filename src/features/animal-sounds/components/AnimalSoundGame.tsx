@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -22,16 +22,63 @@ export const AnimalSoundGame = () => {
     nextQuestion,
     round,
     score,
+    streak,
+    bestStreak,
     selectedAnimalId,
     answer,
     startGame,
   } = useAnimalSoundStore();
 
   const { hasSound, play } = useAnimalAudioPlayer(currentQuestion?.correctAnimal);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     void loadAnimals();
   }, [loadAnimals]);
+
+  useEffect(() => {
+    return () => {
+      if (playingTimeoutRef.current) {
+        clearTimeout(playingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedAnimalId) {
+      return undefined;
+    }
+
+    const nextQuestionTimeout = setTimeout(() => {
+      nextQuestion();
+    }, 1100);
+
+    return () => clearTimeout(nextQuestionTimeout);
+  }, [currentQuestion?.id, nextQuestion, selectedAnimalId]);
+
+  const handlePlay = async () => {
+    if (!hasSound) {
+      return;
+    }
+
+    if (playingTimeoutRef.current) {
+      clearTimeout(playingTimeoutRef.current);
+    }
+
+    setIsPlaying(true);
+    const didPlay = await play();
+
+    if (!didPlay) {
+      setIsPlaying(false);
+      return;
+    }
+
+    playingTimeoutRef.current = setTimeout(() => {
+      setIsPlaying(false);
+      playingTimeoutRef.current = null;
+    }, 1400);
+  };
 
   const selectedIsCorrect =
     selectedAnimalId === currentQuestion?.correctAnimal.id;
@@ -68,20 +115,48 @@ export const AnimalSoundGame = () => {
           <Text style={styles.statLabel}>Tur</Text>
           <Text style={styles.statValue}>{round}</Text>
         </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statLabel}>Seri</Text>
+          <Text style={styles.statValue}>{streak}</Text>
+        </View>
+      </View>
+
+      <View style={styles.streakPanel}>
+        <View style={styles.streakBadge}>
+          <Ionicons color="#D97925" name="flame" size={18} />
+          <Text style={styles.streakBadgeText}>En iyi seri: {bestStreak}</Text>
+        </View>
+        <Text style={styles.streakHint}>
+          Ardışık doğrular bonus puan kazandırır.
+        </Text>
       </View>
 
       <View style={styles.soundPanel}>
         <Text style={styles.soundEmoji}>🔊</Text>
         <Text style={styles.soundTitle}>Bu hangi hayvanın sesi?</Text>
         <Pressable
+          accessibilityLabel={hasSound ? 'Sesi çal' : 'Ses bağlantısı bekleniyor'}
           accessibilityRole="button"
           disabled={!hasSound}
-          onPress={() => void play()}
-          style={[styles.playButton, !hasSound && styles.disabledButton]}
+          onPress={() => void handlePlay()}
+          style={({ pressed }) => [
+            styles.playButton,
+            pressed && styles.pressedPlayButton,
+            isPlaying && styles.playingButton,
+            !hasSound && styles.disabledButton,
+          ]}
         >
-          <Ionicons color="#FFFFFF" name="volume-high" size={22} />
+          <Ionicons
+            color="#FFFFFF"
+            name={isPlaying ? 'radio' : 'volume-high'}
+            size={22}
+          />
           <Text style={styles.playButtonText}>
-            {hasSound ? 'Sesi Çal' : 'Firebase soundUrl bekleniyor'}
+            {isPlaying
+              ? 'Çalıyor...'
+              : hasSound
+                ? 'Sesi Çal'
+                : 'Firebase soundUrl bekleniyor'}
           </Text>
         </Pressable>
       </View>
@@ -118,12 +193,16 @@ export const AnimalSoundGame = () => {
       {selectedAnimalId ? (
         <View style={styles.resultPanel}>
           <Text style={styles.resultText}>
-            {selectedIsCorrect ? 'Doğru bildin!' : `Doğru cevap: ${currentQuestion.correctAnimal.name}`}
+            {selectedIsCorrect
+              ? streak > 1
+                ? `Doğru bildin! ${streak} cevaplık seri!`
+                : 'Doğru bildin!'
+              : `Doğru cevap: ${currentQuestion.correctAnimal.name}`}
           </Text>
-          <Pressable accessibilityRole="button" onPress={nextQuestion} style={styles.nextButton}>
-            <Text style={styles.nextButtonText}>Sonraki Ses</Text>
-            <Ionicons color="#FFFFFF" name="arrow-forward" size={20} />
-          </Pressable>
+          <View style={styles.nextStatus}>
+            <ActivityIndicator color="#FFFFFF" size="small" />
+            <Text style={styles.nextStatusText}>Yeni ses geliyor...</Text>
+          </View>
         </View>
       ) : null}
     </SafeAreaView>
@@ -164,7 +243,7 @@ const styles = StyleSheet.create({
   scoreRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 18,
+    marginBottom: 12,
   },
   statBox: {
     backgroundColor: '#FFFFFF',
@@ -184,6 +263,35 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     marginTop: 4,
+  },
+  streakPanel: {
+    alignItems: 'center',
+    backgroundColor: '#FFF9EA',
+    borderColor: '#E5D7B7',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginBottom: 18,
+    padding: 12,
+  },
+  streakBadge: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  streakBadgeText: {
+    color: '#1F352E',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  streakHint: {
+    color: '#7B827D',
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'right',
   },
   soundPanel: {
     alignItems: 'center',
@@ -211,6 +319,15 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 48,
     paddingHorizontal: 18,
+  },
+  pressedPlayButton: {
+    opacity: 0.82,
+    transform: [{ scale: 0.97 }],
+  },
+  playingButton: {
+    backgroundColor: '#B85E17',
+    borderColor: '#FFE2B9',
+    borderWidth: 2,
   },
   disabledButton: {
     backgroundColor: '#829188',
@@ -279,16 +396,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
-  nextButton: {
+  nextStatus: {
     alignItems: 'center',
+    alignSelf: 'center',
     backgroundColor: '#1F352E',
     borderRadius: 8,
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
     minHeight: 52,
+    paddingHorizontal: 18,
   },
-  nextButtonText: {
+  nextStatusText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '800',
