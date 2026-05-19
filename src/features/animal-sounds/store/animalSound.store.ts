@@ -54,9 +54,14 @@ export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
 
     try {
       const animals = await animalSoundService.getAnimals();
+      const currentQuestion = createQuestion(animals);
+
       set({
         animals,
-        currentQuestion: createQuestion(animals),
+        currentQuestion,
+        error: currentQuestion
+          ? undefined
+          : 'Oyunu başlatmak için en az iki aktif hayvan gerekli.',
         isLoading: false,
       });
     } catch {
@@ -79,7 +84,8 @@ export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
   },
 
   answer: (animalId: string) => {
-    const { bestStreak, currentQuestion, selectedAnimalId, score, streak } = get();
+    const { bestStreak, currentQuestion, selectedAnimalId, score, streak } =
+      get();
 
     if (!currentQuestion || selectedAnimalId) {
       return undefined;
@@ -87,7 +93,8 @@ export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
 
     const isCorrect = animalId === currentQuestion.correctAnimal.id;
     const nextStreak = isCorrect ? streak + 1 : 0;
-    const streakBonus = isCorrect && nextStreak > 1 ? Math.min(nextStreak * 2, 10) : 0;
+    const streakBonus =
+      isCorrect && nextStreak > 1 ? Math.min(nextStreak * 2, 10) : 0;
 
     set({
       selectedAnimalId: animalId,

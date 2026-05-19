@@ -1,28 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  StatusBar as RNStatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 
+import {
+  AppHeader,
+  BottomMenu,
+  chromeStyles,
+  type AppTab,
+} from './AnimalAppChrome';
 import { useAnimalAudioPlayer } from '../services/useAnimalAudioPlayer';
 import { useAnimalSoundStore } from '../store/animalSound.store';
 
-const bottomTabs = [
-  { icon: 'volume-high', key: 'sounds', label: 'Sesler' },
-  { icon: 'grid', key: 'animals', label: 'Hayvanlar' },
-  { icon: 'trophy', key: 'scores', label: 'Başarılar' },
-] as const;
+type AnimalSoundGameProps = {
+  activeTab: AppTab;
+  onTabChange: (tab: AppTab) => void;
+};
 
-export const AnimalSoundGame = () => {
+export const AnimalSoundGame = ({
+  activeTab,
+  onTabChange,
+}: AnimalSoundGameProps) => {
   const {
     currentQuestion,
     error,
@@ -92,22 +98,50 @@ export const AnimalSoundGame = () => {
   const selectedIsCorrect =
     selectedAnimalId === currentQuestion?.correctAnimal.id;
 
-  if (isLoading || !currentQuestion) {
+  if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={chromeStyles.safeArea}>
         <ExpoStatusBar backgroundColor="#F7F3E8" style="dark" />
         <AppHeader onRestart={startGame} />
         <View style={styles.loadingContent}>
           <ActivityIndicator color="#256D5A" size="large" />
           <Text style={styles.loadingText}>Oyun hazırlanıyor...</Text>
         </View>
-        <BottomMenu />
+        <BottomMenu activeTab={activeTab} onTabChange={onTabChange} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!currentQuestion) {
+    return (
+      <SafeAreaView style={chromeStyles.safeArea}>
+        <ExpoStatusBar backgroundColor="#F7F3E8" style="dark" />
+        <AppHeader onRestart={startGame} />
+        <View style={styles.loadingContent}>
+          <Ionicons color="#B43A30" name="alert-circle" size={38} />
+          <Text style={styles.loadingText}>
+            {error ?? 'Oyun başlatılamadı.'}
+          </Text>
+          <Pressable
+            accessibilityLabel="Oyunu tekrar dene"
+            accessibilityRole="button"
+            onPress={() => void loadAnimals()}
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && styles.pressedPlayButton,
+            ]}
+          >
+            <Ionicons color="#FFFFFF" name="refresh" size={20} />
+            <Text style={styles.playButtonText}>Tekrar dene</Text>
+          </Pressable>
+        </View>
+        <BottomMenu activeTab={activeTab} onTabChange={onTabChange} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={chromeStyles.safeArea}>
       <ExpoStatusBar backgroundColor="#F7F3E8" style="dark" />
       <AppHeader onRestart={startGame} />
       <ScrollView
@@ -172,7 +206,7 @@ export const AnimalSoundGame = () => {
                 ? 'Çalıyor...'
                 : hasSound
                   ? 'Sesi Çal'
-                  : 'Firebase soundUrl bekleniyor'}
+                  : 'Ses bağlantısı bekleniyor'}
             </Text>
           </Pressable>
         </View>
@@ -222,120 +256,12 @@ export const AnimalSoundGame = () => {
           </View>
         ) : null}
       </ScrollView>
-      <BottomMenu />
+      <BottomMenu activeTab={activeTab} onTabChange={onTabChange} />
     </SafeAreaView>
   );
 };
 
-type AppHeaderProps = {
-  onRestart: () => void;
-};
-
-const AppHeader = ({ onRestart }: AppHeaderProps) => (
-  <View style={styles.appHeader}>
-    <View style={styles.brandGroup}>
-      <View style={styles.brandIcon}>
-        <Ionicons color="#256D5A" name="paw" size={22} />
-      </View>
-      <View>
-        <Text style={styles.appTitle}>Hayvan Sesleri</Text>
-        <Text style={styles.appSubtitle}>Dinle ve öğren</Text>
-      </View>
-    </View>
-    <Pressable
-      accessibilityLabel="Oyunu yenile"
-      accessibilityRole="button"
-      onPress={onRestart}
-      style={({ pressed }) => [
-        styles.iconButton,
-        pressed && styles.pressedIconButton,
-      ]}
-    >
-      <Ionicons color="#1F352E" name="refresh" size={22} />
-    </Pressable>
-  </View>
-);
-
-const BottomMenu = () => (
-  <View style={styles.bottomMenu}>
-    {bottomTabs.map((tab) => {
-      const isActive = tab.key === 'sounds';
-
-      return (
-        <Pressable
-          accessibilityLabel={`${tab.label} sekmesi`}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: isActive }}
-          key={tab.key}
-          style={({ pressed }) => [
-            styles.bottomTab,
-            isActive && styles.activeBottomTab,
-            pressed && styles.pressedBottomTab,
-          ]}
-        >
-          <Ionicons
-            color={isActive ? '#FFFFFF' : '#61716A'}
-            name={tab.icon}
-            size={22}
-          />
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.bottomTabText,
-              isActive && styles.activeBottomTabText,
-            ]}
-          >
-            {tab.label}
-          </Text>
-        </Pressable>
-      );
-    })}
-  </View>
-);
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F7F3E8',
-    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
-  },
-  appHeader: {
-    alignItems: 'center',
-    backgroundColor: '#F7F3E8',
-    borderBottomColor: '#E5D7B7',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 68,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  brandGroup: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    gap: 10,
-    minWidth: 0,
-  },
-  brandIcon: {
-    alignItems: 'center',
-    backgroundColor: '#DCEFE8',
-    borderRadius: 8,
-    height: 42,
-    justifyContent: 'center',
-    width: 42,
-  },
-  appTitle: {
-    color: '#1F352E',
-    fontSize: 19,
-    fontWeight: '900',
-  },
-  appSubtitle: {
-    color: '#7A5D2F',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 2,
-  },
   contentScroll: {
     flex: 1,
   },
@@ -365,18 +291,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     marginTop: 4,
-  },
-  iconButton: {
-    alignItems: 'center',
-    backgroundColor: '#E6DDC6',
-    borderRadius: 8,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  pressedIconButton: {
-    opacity: 0.74,
-    transform: [{ scale: 0.97 }],
   },
   scoreRow: {
     flexDirection: 'row',
@@ -470,6 +384,16 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#829188',
   },
+  retryButton: {
+    alignItems: 'center',
+    backgroundColor: '#256D5A',
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 18,
+    minHeight: 48,
+    paddingHorizontal: 18,
+  },
   playButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
@@ -556,39 +480,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 14,
     textAlign: 'center',
-  },
-  bottomMenu: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderTopColor: '#E5D7B7',
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    minHeight: 74,
-    paddingBottom: Platform.OS === 'ios' ? 18 : 10,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  bottomTab: {
-    alignItems: 'center',
-    borderRadius: 8,
-    flex: 1,
-    gap: 4,
-    justifyContent: 'center',
-    minHeight: 54,
-  },
-  activeBottomTab: {
-    backgroundColor: '#256D5A',
-  },
-  pressedBottomTab: {
-    opacity: 0.78,
-  },
-  bottomTabText: {
-    color: '#61716A',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  activeBottomTabText: {
-    color: '#FFFFFF',
   },
 });

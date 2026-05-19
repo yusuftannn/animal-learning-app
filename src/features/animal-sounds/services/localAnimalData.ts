@@ -14,7 +14,8 @@ export const fallbackAnimals: Animal[] = [
     id: 'dog',
     name: 'Köpek',
     emoji: '🐶',
-    soundUrl: 'https://audio-previews.elements.envatousercontent.com/files/272118110/preview.mp3',
+    soundUrl:
+      'https://audio-previews.elements.envatousercontent.com/files/272118110/preview.mp3',
     category: 'Evcil',
     difficulty: 'easy',
     isActive: true,
@@ -23,18 +24,20 @@ export const fallbackAnimals: Animal[] = [
     id: 'cow',
     name: 'İnek',
     emoji: '🐮',
-    soundUrl: 'https://audio-previews.elements.envatousercontent.com/files/272118241/preview.mp3',
+    soundUrl:
+      'https://audio-previews.elements.envatousercontent.com/files/272118241/preview.mp3',
     category: 'Çiftlik',
     difficulty: 'easy',
     isActive: true,
   },
   {
     id: 'bird',
-    name: "Kuş",
-    emoji: "🐦",
-    soundUrl: 'https://audio-previews.elements.envatousercontent.com/files/485635651/preview.mp3',
-    category: "Evcil",
-    difficulty: "easy",
-    isActive: true
-}
+    name: 'Kuş',
+    emoji: '🐦',
+    soundUrl:
+      'https://audio-previews.elements.envatousercontent.com/files/485635651/preview.mp3',
+    category: 'Evcil',
+    difficulty: 'easy',
+    isActive: true,
+  },
 ];

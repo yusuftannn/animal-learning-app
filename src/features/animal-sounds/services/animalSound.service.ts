@@ -6,6 +6,28 @@ import { fallbackAnimals } from './localAnimalData';
 import type { Animal } from '../types/animal.types';
 
 const ANIMALS_COLLECTION = 'animals';
+const FIREBASE_LOAD_TIMEOUT_MS = 4500;
+
+const withTimeout = async <T,>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('Firebase animal load timed out.'));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
 
 const toAnimal = (id: string, data: Record<string, unknown>): Animal => ({
   id,
@@ -27,9 +49,17 @@ export const animalSoundService = {
       collection(db, ANIMALS_COLLECTION),
       where('isActive', '==', true),
     );
-    const snapshot = await getDocs(animalsQuery);
-    const animals = snapshot.docs.map((doc) => toAnimal(doc.id, doc.data()));
 
-    return animals.length > 0 ? animals : fallbackAnimals;
+    try {
+      const snapshot = await withTimeout(
+        getDocs(animalsQuery),
+        FIREBASE_LOAD_TIMEOUT_MS,
+      );
+      const animals = snapshot.docs.map((doc) => toAnimal(doc.id, doc.data()));
+
+      return animals.length >= 2 ? animals : fallbackAnimals;
+    } catch {
+      return fallbackAnimals;
+    }
   },
 };
