@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,9 +33,22 @@ const difficultyLabels: Record<Animal['difficulty'], string> = {
   hard: 'Zor',
 };
 
+type DifficultyFilter = Animal['difficulty'] | 'all';
+
+const difficultyFilters: Array<{ label: string; value: DifficultyFilter }> = [
+  { label: 'Tümü', value: 'all' },
+  { label: 'Kolay', value: 'easy' },
+  { label: 'Orta', value: 'medium' },
+  { label: 'Zor', value: 'hard' },
+];
+
 export const AnimalsPage = ({ activeTab, onTabChange }: AnimalsPageProps) => {
   const { animals, error, isLoading, loadAnimals, startGame } =
     useAnimalSoundStore();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [difficultyFilter, setDifficultyFilter] =
+    useState<DifficultyFilter>('all');
+  const [showSoundCardsOnly, setShowSoundCardsOnly] = useState(false);
 
   useEffect(() => {
     if (animals.length === 0) {
@@ -42,8 +56,24 @@ export const AnimalsPage = ({ activeTab, onTabChange }: AnimalsPageProps) => {
     }
   }, [animals.length, loadAnimals]);
 
+  const filteredAnimals = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLocaleLowerCase('tr');
+
+    return animals.filter((animal) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        animal.name.toLocaleLowerCase('tr').includes(normalizedSearch) ||
+        animal.category.toLocaleLowerCase('tr').includes(normalizedSearch);
+      const matchesDifficulty =
+        difficultyFilter === 'all' || animal.difficulty === difficultyFilter;
+      const matchesSound = !showSoundCardsOnly || Boolean(animal.soundUrl);
+
+      return matchesSearch && matchesDifficulty && matchesSound;
+    });
+  }, [animals, difficultyFilter, searchTerm, showSoundCardsOnly]);
+
   const categories = useMemo(() => {
-    const categoryMap = animals.reduce<Record<string, Animal[]>>(
+    const categoryMap = filteredAnimals.reduce<Record<string, Animal[]>>(
       (groups, animal) => {
         groups[animal.category] = [...(groups[animal.category] ?? []), animal];
         return groups;
@@ -54,7 +84,12 @@ export const AnimalsPage = ({ activeTab, onTabChange }: AnimalsPageProps) => {
     return Object.entries(categoryMap).sort(([first], [second]) =>
       first.localeCompare(second, 'tr'),
     );
-  }, [animals]);
+  }, [filteredAnimals]);
+
+  const hasActiveFilters =
+    searchTerm.trim().length > 0 ||
+    difficultyFilter !== 'all' ||
+    showSoundCardsOnly;
 
   return (
     <SafeAreaView style={chromeStyles.safeArea}>
@@ -91,6 +126,97 @@ export const AnimalsPage = ({ activeTab, onTabChange }: AnimalsPageProps) => {
           </View>
         </View>
 
+        <View style={styles.filterPanel}>
+          <View style={styles.searchField}>
+            <Ionicons color="#61716A" name="search" size={19} />
+            <TextInput
+              accessibilityLabel="Hayvanlarda ara"
+              autoCorrect={false}
+              onChangeText={setSearchTerm}
+              placeholder="Hayvan veya kategori ara"
+              placeholderTextColor="#829188"
+              style={styles.searchInput}
+              value={searchTerm}
+            />
+            {searchTerm ? (
+              <Pressable
+                accessibilityLabel="Aramayı temizle"
+                accessibilityRole="button"
+                onPress={() => setSearchTerm('')}
+                style={({ pressed }) => [
+                  styles.clearSearchButton,
+                  pressed && styles.pressedButton,
+                ]}
+              >
+                <Ionicons color="#61716A" name="close-circle" size={20} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.filterChips}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {difficultyFilters.map((filter) => {
+              const isSelected = difficultyFilter === filter.value;
+
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  key={filter.value}
+                  onPress={() => setDifficultyFilter(filter.value)}
+                  style={({ pressed }) => [
+                    styles.filterChip,
+                    isSelected && styles.selectedFilterChip,
+                    pressed && styles.pressedButton,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      isSelected && styles.selectedFilterChipText,
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.filterFooter}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: showSoundCardsOnly }}
+              onPress={() => setShowSoundCardsOnly((current) => !current)}
+              style={({ pressed }) => [
+                styles.soundFilterButton,
+                showSoundCardsOnly && styles.selectedSoundFilterButton,
+                pressed && styles.pressedButton,
+              ]}
+            >
+              <Ionicons
+                color={showSoundCardsOnly ? '#FFFFFF' : '#256D5A'}
+                name={showSoundCardsOnly ? 'volume-high' : 'volume-medium'}
+                size={18}
+              />
+              <Text
+                style={[
+                  styles.soundFilterText,
+                  showSoundCardsOnly && styles.selectedSoundFilterText,
+                ]}
+              >
+                Sadece sesli
+              </Text>
+            </Pressable>
+            <Text style={styles.filterCount}>
+              {filteredAnimals.length} sonuç
+            </Text>
+          </View>
+        </View>
+
         {isLoading ? (
           <View style={styles.emptyState}>
             <ActivityIndicator color="#256D5A" size="large" />
@@ -109,6 +235,30 @@ export const AnimalsPage = ({ activeTab, onTabChange }: AnimalsPageProps) => {
           <View style={styles.emptyState}>
             <Ionicons color="#829188" name="paw" size={38} />
             <Text style={styles.emptyText}>Henüz hayvan bulunamadı.</Text>
+          </View>
+        ) : null}
+
+        {!isLoading && animals.length > 0 && categories.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons color="#829188" name="search-outline" size={38} />
+            <Text style={styles.emptyText}>Filtreye uygun hayvan bulunamadı.</Text>
+            {hasActiveFilters ? (
+              <Pressable
+                accessibilityLabel="Filtreleri temizle"
+                accessibilityRole="button"
+                onPress={() => {
+                  setSearchTerm('');
+                  setDifficultyFilter('all');
+                  setShowSoundCardsOnly(false);
+                }}
+                style={({ pressed }) => [
+                  styles.resetFiltersButton,
+                  pressed && styles.pressedButton,
+                ]}
+              >
+                <Text style={styles.resetFiltersText}>Filtreleri temizle</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -280,6 +430,96 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
+  filterPanel: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5D7B7',
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+    marginBottom: 18,
+    padding: 12,
+  },
+  searchField: {
+    alignItems: 'center',
+    backgroundColor: '#F7F3E8',
+    borderColor: '#E5D7B7',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 46,
+    paddingHorizontal: 12,
+  },
+  searchInput: {
+    color: '#1F352E',
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    minWidth: 0,
+    paddingVertical: 0,
+  },
+  clearSearchButton: {
+    alignItems: 'center',
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  filterChips: {
+    gap: 8,
+    paddingRight: 6,
+  },
+  filterChip: {
+    alignItems: 'center',
+    backgroundColor: '#EEF0EC',
+    borderRadius: 8,
+    justifyContent: 'center',
+    minHeight: 38,
+    minWidth: 62,
+    paddingHorizontal: 12,
+  },
+  selectedFilterChip: {
+    backgroundColor: '#1F352E',
+  },
+  filterChipText: {
+    color: '#61716A',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  selectedFilterChipText: {
+    color: '#FFFFFF',
+  },
+  filterFooter: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  soundFilterButton: {
+    alignItems: 'center',
+    backgroundColor: '#DCEFE8',
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 12,
+  },
+  selectedSoundFilterButton: {
+    backgroundColor: '#256D5A',
+  },
+  soundFilterText: {
+    color: '#256D5A',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  selectedSoundFilterText: {
+    color: '#FFFFFF',
+  },
+  filterCount: {
+    color: '#7B827D',
+    fontSize: 13,
+    fontWeight: '800',
+  },
   notice: {
     alignItems: 'center',
     backgroundColor: '#F6DDDA',
@@ -306,6 +546,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginTop: 12,
+    textAlign: 'center',
+  },
+  resetFiltersButton: {
+    alignItems: 'center',
+    backgroundColor: '#256D5A',
+    borderRadius: 8,
+    justifyContent: 'center',
+    marginTop: 14,
+    minHeight: 42,
+    paddingHorizontal: 14,
+  },
+  resetFiltersText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
   },
   categorySection: {
     marginTop: 8,
