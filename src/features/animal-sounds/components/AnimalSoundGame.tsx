@@ -18,11 +18,28 @@ import {
   type AppTab,
 } from './AnimalAppChrome';
 import { useAnimalAudioPlayer } from '../services/useAnimalAudioPlayer';
-import { useAnimalSoundStore } from '../store/animalSound.store';
+import {
+  useAnimalSoundStore,
+  type GameDifficulty,
+} from '../store/animalSound.store';
 
 type AnimalSoundGameProps = {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
+};
+
+const difficultyModes: Array<{ label: string; value: GameDifficulty }> = [
+  { label: 'Karışık', value: 'all' },
+  { label: 'Kolay', value: 'easy' },
+  { label: 'Orta', value: 'medium' },
+  { label: 'Zor', value: 'hard' },
+];
+
+const difficultyLabels: Record<GameDifficulty, string> = {
+  all: 'Karışık',
+  easy: 'Kolay',
+  medium: 'Orta',
+  hard: 'Zor',
 };
 
 export const AnimalSoundGame = ({
@@ -30,8 +47,10 @@ export const AnimalSoundGame = ({
   onTabChange,
 }: AnimalSoundGameProps) => {
   const {
+    animals,
     currentQuestion,
     error,
+    gameDifficulty,
     isLoading,
     loadAnimals,
     nextQuestion,
@@ -41,6 +60,7 @@ export const AnimalSoundGame = ({
     bestStreak,
     selectedAnimalId,
     answer,
+    setGameDifficulty,
     startGame,
   } = useAnimalSoundStore();
 
@@ -169,6 +189,69 @@ export const AnimalSoundGame = ({
             <Text style={styles.statLabel}>Seri</Text>
             <Text style={styles.statValue}>{streak}</Text>
           </View>
+        </View>
+
+        <View style={styles.levelPanel}>
+          <View style={styles.levelHeader}>
+            <View style={styles.levelTitleGroup}>
+              <Ionicons color="#256D5A" name="options" size={18} />
+              <Text style={styles.levelTitle}>Oyun seviyesi</Text>
+            </View>
+            <Text style={styles.levelStatus}>{difficultyLabels[gameDifficulty]}</Text>
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.levelModes}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {difficultyModes.map((mode) => {
+              const isSelected = mode.value === gameDifficulty;
+              const animalCount =
+                mode.value === 'all'
+                  ? animals.length
+                  : animals.filter((animal) => animal.difficulty === mode.value)
+                      .length;
+              const isDisabled =
+                mode.value === 'all' ? animals.length < 2 : animalCount === 0;
+
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: isDisabled, selected: isSelected }}
+                  disabled={isDisabled}
+                  key={mode.value}
+                  onPress={() => {
+                    if (!isSelected) {
+                      setGameDifficulty(mode.value);
+                    }
+                  }}
+                  style={({ pressed }) => [
+                    styles.levelMode,
+                    isSelected && styles.selectedLevelMode,
+                    isDisabled && styles.disabledLevelMode,
+                    pressed && !isDisabled && styles.pressedPlayButton,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.levelModeLabel,
+                      isSelected && styles.selectedLevelModeText,
+                    ]}
+                  >
+                    {mode.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.levelModeCount,
+                      isSelected && styles.selectedLevelModeCount,
+                    ]}
+                  >
+                    {animalCount}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
 
         <View style={styles.streakPanel}>
@@ -327,6 +410,86 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 18,
     padding: 12,
+  },
+  levelPanel: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5D7B7',
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+    marginBottom: 12,
+    padding: 12,
+  },
+  levelHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  levelTitleGroup: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  levelTitle: {
+    color: '#1F352E',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  levelStatus: {
+    backgroundColor: '#DCEFE8',
+    borderRadius: 8,
+    color: '#256D5A',
+    fontSize: 12,
+    fontWeight: '900',
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  levelModes: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  levelMode: {
+    alignItems: 'center',
+    backgroundColor: '#EEF0EC',
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 7,
+    justifyContent: 'center',
+    minHeight: 40,
+    minWidth: 76,
+    paddingHorizontal: 11,
+  },
+  selectedLevelMode: {
+    backgroundColor: '#1F352E',
+  },
+  disabledLevelMode: {
+    opacity: 0.45,
+  },
+  levelModeLabel: {
+    color: '#61716A',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  levelModeCount: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    color: '#61716A',
+    fontSize: 11,
+    fontWeight: '900',
+    minWidth: 22,
+    overflow: 'hidden',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    textAlign: 'center',
+  },
+  selectedLevelModeText: {
+    color: '#FFFFFF',
+  },
+  selectedLevelModeCount: {
+    backgroundColor: '#DCEFE8',
+    color: '#1F352E',
   },
   streakBadge: {
     alignItems: 'center',

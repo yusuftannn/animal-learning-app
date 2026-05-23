@@ -1,12 +1,20 @@
 import { create } from 'zustand';
 
 import { animalSoundService } from '../services/animalSound.service';
-import type { Animal, AnswerResult, GameQuestion } from '../types/animal.types';
+import type {
+  Animal,
+  AnimalDifficulty,
+  AnswerResult,
+  GameQuestion,
+} from '../types/animal.types';
+
+export type GameDifficulty = AnimalDifficulty | 'all';
 
 type AnimalSoundState = {
   animals: Animal[];
   currentQuestion?: GameQuestion;
   selectedAnimalId?: string;
+  gameDifficulty: GameDifficulty;
   score: number;
   round: number;
   streak: number;
@@ -17,18 +25,39 @@ type AnimalSoundState = {
   startGame: () => void;
   answer: (animalId: string) => AnswerResult | undefined;
   nextQuestion: () => void;
+  setGameDifficulty: (difficulty: GameDifficulty) => void;
 };
 
 const shuffle = <T,>(items: T[]): T[] => {
   return [...items].sort(() => Math.random() - 0.5);
 };
 
-const createQuestion = (animals: Animal[]): GameQuestion | undefined => {
+const getQuestionAnimals = (
+  animals: Animal[],
+  difficulty: GameDifficulty,
+): Animal[] => {
+  if (difficulty === 'all') {
+    return animals;
+  }
+
+  return animals.filter((animal) => animal.difficulty === difficulty);
+};
+
+const createQuestion = (
+  animals: Animal[],
+  difficulty: GameDifficulty,
+): GameQuestion | undefined => {
   if (animals.length < 2) {
     return undefined;
   }
 
-  const correctAnimal = shuffle(animals)[0];
+  const questionAnimals = getQuestionAnimals(animals, difficulty);
+  const correctAnimal = shuffle(questionAnimals)[0];
+
+  if (!correctAnimal) {
+    return undefined;
+  }
+
   const wrongOptions = shuffle(
     animals.filter((animal) => animal.id !== correctAnimal.id),
   ).slice(0, 3);
@@ -43,6 +72,7 @@ const createQuestion = (animals: Animal[]): GameQuestion | undefined => {
 
 export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
   animals: [],
+  gameDifficulty: 'all',
   score: 0,
   round: 1,
   streak: 0,
@@ -54,7 +84,7 @@ export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
 
     try {
       const animals = await animalSoundService.getAnimals();
-      const currentQuestion = createQuestion(animals);
+      const currentQuestion = createQuestion(animals, get().gameDifficulty);
 
       set({
         animals,
@@ -73,13 +103,13 @@ export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
   },
 
   startGame: () => {
-    const { animals } = get();
+    const { animals, gameDifficulty } = get();
     set({
       score: 0,
       round: 1,
       streak: 0,
       selectedAnimalId: undefined,
-      currentQuestion: createQuestion(animals),
+      currentQuestion: createQuestion(animals, gameDifficulty),
     });
   },
 
@@ -110,11 +140,24 @@ export const useAnimalSoundStore = create<AnimalSoundState>((set, get) => ({
   },
 
   nextQuestion: () => {
-    const { animals, round } = get();
+    const { animals, gameDifficulty, round } = get();
     set({
       round: round + 1,
       selectedAnimalId: undefined,
-      currentQuestion: createQuestion(animals),
+      currentQuestion: createQuestion(animals, gameDifficulty),
+    });
+  },
+
+  setGameDifficulty: (gameDifficulty) => {
+    const { animals } = get();
+
+    set({
+      gameDifficulty,
+      round: 1,
+      score: 0,
+      streak: 0,
+      selectedAnimalId: undefined,
+      currentQuestion: createQuestion(animals, gameDifficulty),
     });
   },
 }));
