@@ -83,7 +83,11 @@ export const ScoresPage = ({ activeTab, onTabChange }: ScoresPageProps) => {
   return (
     <SafeAreaView style={chromeStyles.safeArea}>
       <ExpoStatusBar backgroundColor="#F7F3E8" style="dark" />
-      <AppHeader onRestart={startGame} />
+      <AppHeader
+        activeTab={activeTab}
+        onRestart={startGame}
+        onTabChange={onTabChange}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

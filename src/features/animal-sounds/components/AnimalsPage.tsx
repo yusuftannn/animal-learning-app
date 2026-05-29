@@ -94,7 +94,11 @@ export const AnimalsPage = ({ activeTab, onTabChange }: AnimalsPageProps) => {
   return (
     <SafeAreaView style={chromeStyles.safeArea}>
       <ExpoStatusBar backgroundColor="#F7F3E8" style="dark" />
-      <AppHeader onRestart={startGame} />
+      <AppHeader
+        activeTab={activeTab}
+        onRestart={startGame}
+        onTabChange={onTabChange}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

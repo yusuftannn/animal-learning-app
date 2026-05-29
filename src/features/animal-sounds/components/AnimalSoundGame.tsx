@@ -122,7 +122,11 @@ export const AnimalSoundGame = ({
     return (
       <SafeAreaView style={chromeStyles.safeArea}>
         <ExpoStatusBar backgroundColor="#F7F3E8" style="dark" />
-        <AppHeader onRestart={startGame} />
+        <AppHeader
+          activeTab={activeTab}
+          onRestart={startGame}
+          onTabChange={onTabChange}
+        />
         <View style={styles.loadingContent}>
           <ActivityIndicator color="#256D5A" size="large" />
           <Text style={styles.loadingText}>Oyun hazırlanıyor...</Text>
@@ -136,7 +140,11 @@ export const AnimalSoundGame = ({
     return (
       <SafeAreaView style={chromeStyles.safeArea}>
         <ExpoStatusBar backgroundColor="#F7F3E8" style="dark" />
-        <AppHeader onRestart={startGame} />
+        <AppHeader
+          activeTab={activeTab}
+          onRestart={startGame}
+          onTabChange={onTabChange}
+        />
         <View style={styles.loadingContent}>
           <Ionicons color="#B43A30" name="alert-circle" size={38} />
           <Text style={styles.loadingText}>
@@ -163,7 +171,11 @@ export const AnimalSoundGame = ({
   return (
     <SafeAreaView style={chromeStyles.safeArea}>
       <ExpoStatusBar backgroundColor="#F7F3E8" style="dark" />
-      <AppHeader onRestart={startGame} />
+      <AppHeader
+        activeTab={activeTab}
+        onRestart={startGame}
+        onTabChange={onTabChange}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

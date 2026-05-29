@@ -1,6 +1,14 @@
-import { Platform, Pressable, StyleSheet, Text, View, StatusBar as RNStatusBar } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  StatusBar as RNStatusBar,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 
 export type AppTab = 'sounds' | 'animals' | 'scores';
 
@@ -17,17 +25,48 @@ const bottomTabs: TabItem[] = [
 ];
 
 type AppHeaderProps = {
+  activeTab: AppTab;
+  onTabChange: (tab: AppTab) => void;
   onRestart: () => void;
 };
 
-export const AppHeader = ({ onRestart }: AppHeaderProps) => (
-  <View style={chromeStyles.appHeader}>
+export const AppHeader = ({
+  activeTab,
+  onRestart,
+  onTabChange,
+}: AppHeaderProps) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleTabChange = (tab: AppTab) => {
+    setIsMenuOpen(false);
+    onTabChange(tab);
+  };
+
+  const handleRestart = () => {
+    setIsMenuOpen(false);
+    onRestart();
+    onTabChange('sounds');
+  };
+
+  return (
+    <View style={chromeStyles.appHeader}>
     <View style={chromeStyles.brandGroup}>
+      <Pressable
+        accessibilityLabel="Menüyü aç"
+        accessibilityRole="button"
+        onPress={() => setIsMenuOpen(true)}
+        style={({ pressed }) => [
+          chromeStyles.menuButton,
+          pressed && chromeStyles.pressedButton,
+        ]}
+      >
+        <Ionicons color="#1F352E" name="menu" size={25} />
+      </Pressable>
       <View style={chromeStyles.brandIcon}>
         <Ionicons color="#256D5A" name="paw" size={22} />
       </View>
-      <View>
-        <Text style={chromeStyles.appTitle}>Hayvan Sesleri</Text>
+      <View style={chromeStyles.brandText}>
+        <Text numberOfLines={1} style={chromeStyles.appTitle}>Hayvan Sesleri</Text>
         <Text style={chromeStyles.appSubtitle}>Dinle ve öğren</Text>
       </View>
     </View>
@@ -42,8 +81,104 @@ export const AppHeader = ({ onRestart }: AppHeaderProps) => (
     >
       <Ionicons color="#1F352E" name="refresh" size={22} />
     </Pressable>
+    <Modal
+      animationType="fade"
+      onRequestClose={() => setIsMenuOpen(false)}
+      transparent
+      visible={isMenuOpen}
+    >
+      <View style={chromeStyles.menuOverlay}>
+        <Pressable
+          accessibilityLabel="Menüyü kapat"
+          onPress={() => setIsMenuOpen(false)}
+          style={chromeStyles.menuBackdrop}
+        />
+        <View style={chromeStyles.drawerMenu}>
+          <View style={chromeStyles.drawerHeader}>
+            <View style={chromeStyles.drawerTitleGroup}>
+              <Text style={chromeStyles.drawerTitle}>Menü</Text>
+              <Text style={chromeStyles.drawerSubtitle}>
+                Nereye gitmek istersin?
+              </Text>
+            </View>
+            <Pressable
+              accessibilityLabel="Menüyü kapat"
+              accessibilityRole="button"
+              onPress={() => setIsMenuOpen(false)}
+              style={({ pressed }) => [
+                chromeStyles.drawerCloseButton,
+                pressed && chromeStyles.pressedButton,
+              ]}
+            >
+              <Ionicons color="#1F352E" name="close" size={22} />
+            </Pressable>
+          </View>
+
+          <View style={chromeStyles.drawerTabs}>
+            {bottomTabs.map((tab) => {
+              const isActive = tab.key === activeTab;
+
+              return (
+                <Pressable
+                  accessibilityLabel={`${tab.label} sayfasına git`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  key={tab.key}
+                  onPress={() => handleTabChange(tab.key)}
+                  style={({ pressed }) => [
+                    chromeStyles.drawerTab,
+                    isActive && chromeStyles.activeDrawerTab,
+                    pressed && chromeStyles.pressedButton,
+                  ]}
+                >
+                  <View
+                    style={[
+                      chromeStyles.drawerTabIcon,
+                      isActive && chromeStyles.activeDrawerTabIcon,
+                    ]}
+                  >
+                    <Ionicons
+                      color={isActive ? '#FFFFFF' : '#256D5A'}
+                      name={tab.icon}
+                      size={21}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      chromeStyles.drawerTabText,
+                      isActive && chromeStyles.activeDrawerTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                  {isActive ? (
+                    <Ionicons color="#256D5A" name="checkmark-circle" size={21} />
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Pressable
+            accessibilityLabel="Oyunu yeniden başlat"
+            accessibilityRole="button"
+            onPress={handleRestart}
+            style={({ pressed }) => [
+              chromeStyles.drawerRestartButton,
+              pressed && chromeStyles.pressedButton,
+            ]}
+          >
+            <Ionicons color="#FFFFFF" name="refresh" size={20} />
+            <Text style={chromeStyles.drawerRestartText}>
+              Oyunu yeniden başlat
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   </View>
-);
+  );
+};
 
 type BottomMenuProps = {
   activeTab: AppTab;
@@ -109,8 +244,18 @@ export const chromeStyles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     minWidth: 0,
+  },
+  menuButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5D7B7',
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
   brandIcon: {
     alignItems: 'center',
@@ -119,6 +264,10 @@ export const chromeStyles = StyleSheet.create({
     height: 42,
     justifyContent: 'center',
     width: 42,
+  },
+  brandText: {
+    flex: 1,
+    minWidth: 0,
   },
   appTitle: {
     color: '#1F352E',
@@ -142,6 +291,112 @@ export const chromeStyles = StyleSheet.create({
   pressedButton: {
     opacity: 0.74,
     transform: [{ scale: 0.97 }],
+  },
+  menuOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  menuBackdrop: {
+    backgroundColor: 'rgba(31, 53, 46, 0.42)',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  drawerMenu: {
+    backgroundColor: '#F7F3E8',
+    borderRightColor: '#E5D7B7',
+    borderRightWidth: 1,
+    gap: 14,
+    maxWidth: 330,
+    paddingBottom: 22,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) + 18 : 54,
+    width: '82%',
+  },
+  drawerHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  drawerTitleGroup: {
+    flex: 1,
+    minWidth: 0,
+  },
+  drawerTitle: {
+    color: '#1F352E',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  drawerSubtitle: {
+    color: '#7A5D2F',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  drawerCloseButton: {
+    alignItems: 'center',
+    backgroundColor: '#E6DDC6',
+    borderRadius: 8,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  drawerTabs: {
+    gap: 9,
+  },
+  drawerTab: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5D7B7',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 58,
+    paddingHorizontal: 12,
+  },
+  activeDrawerTab: {
+    backgroundColor: '#DCEFE8',
+    borderColor: '#256D5A',
+  },
+  drawerTabIcon: {
+    alignItems: 'center',
+    backgroundColor: '#EEF0EC',
+    borderRadius: 8,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  activeDrawerTabIcon: {
+    backgroundColor: '#256D5A',
+  },
+  drawerTabText: {
+    color: '#1F352E',
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  activeDrawerTabText: {
+    color: '#256D5A',
+  },
+  drawerRestartButton: {
+    alignItems: 'center',
+    backgroundColor: '#D97925',
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    marginTop: 'auto',
+    minHeight: 50,
+    paddingHorizontal: 14,
+  },
+  drawerRestartText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
   },
   bottomMenu: {
     alignItems: 'center',
